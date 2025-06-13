@@ -8,43 +8,45 @@ if [ ! -f "$VERSION_FILE" ]; then
   echo "0.0.0" > "$VERSION_FILE"
 fi
 
-CURRENT_VERSION=$(cat "$VERSION_FILE")
-IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+read -r MAJOR MINOR PATCH < <(tr '.' ' ' < "$VERSION_FILE")
 
-# ---- no args → just print version ----
+# ---- no args → print version ----
 if [ "$#" -eq 0 ]; then
-  echo "$CURRENT_VERSION"
+  echo "$MAJOR.$MINOR.$PATCH"
   exit 0
 fi
 
-# ---- parse increment argument ----
 ARG="$1"
 
-if [[ "$ARG" == "i" ]]; then
-  # increment patch
-  PATCH=$((PATCH + 1))
-elif [[ "$ARG" =~ ^i\.([0-9]+)$ ]]; then
-  # i.# → increment minor, set patch
-  NEW_MINOR="${BASH_REMATCH[1]}"
-  MINOR=$((MINOR + 1))
-  PATCH="$NEW_MINOR"
-elif [[ "$ARG" =~ ^i\.([0-9]+)\.([0-9]+)$ ]]; then
-  # i.#.# → increment major, set minor and patch
-  NEW_MAJOR="${BASH_REMATCH[1]}"
-  NEW_MINOR="${BASH_REMATCH[2]}"
-  MAJOR=$((MAJOR + 1))
-  MINOR="$NEW_MAJOR"
-  PATCH="$NEW_MINOR"
-else
-  echo "Invalid argument: $ARG"
-  echo "Usage:"
-  echo "  ./version.sh          → print version"
-  echo "  ./version.sh i        → increment patch"
-  echo "  ./version.sh i.#      → increment minor, set patch"
-  echo "  ./version.sh i.#.#    → increment major, set minor and patch"
-  exit 1
-fi
+# ---- split and normalize to 3 parts ----
+IFS='.' read -ra PARTS <<< "$ARG"
 
-# ---- save new version if incremented ----
-echo "$MAJOR.$MINOR.$PATCH" > "$VERSION_FILE"
-echo "$MAJOR.$MINOR.$PATCH"
+while [ "${#PARTS[@]}" -lt 3 ]; do
+  PARTS=( "x" "${PARTS[@]}" )
+done
+
+# ---- apply rules positionally ----
+apply_part() {
+  local current="$1"
+  local rule="$2"
+
+  if [[ "$rule" == "x" ]]; then
+    echo "$current"
+  elif [[ "$rule" == "i" ]]; then
+    echo $((current + 1))
+  elif [[ "$rule" =~ ^[0-9]+$ ]]; then
+    echo "$rule"
+  else
+    echo "Invalid token: $rule"
+    exit 1
+  fi
+}
+
+NEW_MAJOR=$(apply_part "$MAJOR" "${PARTS[0]}")
+NEW_MINOR=$(apply_part "$MINOR" "${PARTS[1]}")
+NEW_PATCH=$(apply_part "$PATCH" "${PARTS[2]}")
+
+NEW_VERSION="$NEW_MAJOR.$NEW_MINOR.$NEW_PATCH"
+
+echo "$NEW_VERSION" > "$VERSION_FILE"
+echo "$NEW_VERSION"
