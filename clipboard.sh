@@ -75,13 +75,29 @@ while true; do
   IFS= read -rsn1 key
 
   case "$key" in
-    $'\x1b') # escape or arrow
-      read -rsn2 rest || true
-      case "$rest" in
-        "[A") ((SELECTED > 0)) && SELECTED=$((SELECTED - 1)) ;;
-        "[B") ((SELECTED < COUNT - 1)) && SELECTED=$((SELECTED + 1)) ;;
-        "") exit 0 ;; # Esc
-      esac
+    $'\x1b') # escape / arrows / paging
+      read -rsn1 k1 || true
+      if [[ "$k1" == "[" ]]; then
+        read -rsn1 k2 || true
+        case "$k2" in
+          A) ((SELECTED > 0)) && SELECTED=$((SELECTED - 1)) ;; # Up
+          B) ((SELECTED < COUNT - 1)) && SELECTED=$((SELECTED + 1)) ;; # Down
+          5) # Page Up
+            read -rsn1 _ || true # consume '~'
+            rows=$(tput lines)
+            SELECTED=$((SELECTED - rows + 1))
+            ((SELECTED < 0)) && SELECTED=0
+            ;;
+          6) # Page Down
+            read -rsn1 _ || true # consume '~'
+            rows=$(tput lines)
+            SELECTED=$((SELECTED + rows - 1))
+            ((SELECTED >= COUNT)) && SELECTED=$((COUNT - 1))
+            ;;
+        esac
+      else
+        exit 0 # plain Esc
+      fi
       ;;
     "") # Enter
       echo "${LINES[SELECTED]}"
