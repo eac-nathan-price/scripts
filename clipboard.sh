@@ -8,6 +8,18 @@ mkdir -p "$CLIPBOARD_DIR"
 touch "$CLIPBOARD_FILE"
 
 # -------------------------
+# Clear clipboard
+# -------------------------
+if [ "$#" -eq 1 ]; then
+  case "$1" in
+    -c|--clear)
+      : > "$CLIPBOARD_FILE"
+      exit 0
+      ;;
+  esac
+fi
+
+# -------------------------
 # Append mode
 # -------------------------
 if [ "$#" -gt 0 ]; then
