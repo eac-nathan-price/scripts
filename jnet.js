@@ -1,0 +1,116 @@
+(async function () {
+  // Load JSZip dynamically if not already present
+  if (typeof JSZip === "undefined") {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const sanitize = s => s.replace(/[\/\\:*?"<>|]/g, "-").replace(/\s+/g, " ").trim();
+  const toYMD = s => {
+    const m = String(s).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if (!m) return sanitize(s);
+    let [, mm, dd, yy] = m;
+    yy = yy.length === 2 ? "20" + yy : yy;
+    return `${yy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
+  };
+
+  // Case info for zip filename
+  const caseNum = document.querySelector("#ContentPlaceHolder1_lblCaseNumber")?.innerText.trim() || "CASE";
+  const first = document.querySelector("#ContentPlaceHolder1_lblFirstName")?.innerText.trim() || "FIRST";
+  const last = document.querySelector("#ContentPlaceHolder1_lblLastName")?.innerText.trim() || "LAST";
+  const zipFileName = `${caseNum}-${last}-${first}.zip`;
+
+  const seenIds = new Set();
+  const seenNames = Object.create(null);
+  const zip = new JSZip();
+  let successCount = 0;
+  let failCount = 0;
+
+  async function processPage() {
+    const rows = Array.from(document.querySelectorAll('#ContentPlaceHolder1_gvDocs tr'));
+
+    for (const row of rows) {
+      const link = row.querySelector('a[id^="ContentPlaceHolder1_gvDocs_btnSelectDoc"]');
+      const cols = row.querySelectorAll('td');
+      if (!link || cols.length < 3) continue;
+
+      const m = (link.getAttribute('onclick') || '').match(/DocViewer\.aspx\?id=(\d+)/);
+      if (!m) continue;
+
+      const id = m[1];
+      if (seenIds.has(id)) continue; // skip duplicates
+      seenIds.add(id);
+
+      const url = new URL(`/access/DocViewer.aspx?id=${id}`, location.origin).href;
+
+      const desc = sanitize(cols[1].innerText);
+      const ymd = toYMD(cols[2].innerText);
+
+      const base = `${ymd} ${desc}`;
+      const n = (seenNames[base] = (seenNames[base] || 0) + 1);
+      const fileName = n > 1 ? `${base} (${n}).pdf` : `${base}.pdf`;
+
+      await sleep(400);
+
+      try {
+        const res = await fetch(url, { credentials: "include" });
+        if (!res.ok) {
+          console.warn("❌ Failed:", id, res.status);
+          failCount++;
+          continue;
+        }
+        const blob = await res.blob();
+        const arrayBuffer = await blob.arrayBuffer();
+        zip.file(fileName, arrayBuffer);
+        console.log("✅ Added to zip:", fileName);
+        successCount++;
+      } catch (err) {
+        console.error("❌ Error fetching", id, err);
+        failCount++;
+      }
+    }
+  }
+
+  async function goThroughPages() {
+    while (true) {
+      await processPage();
+
+      const nextBtn = document.querySelector("#ContentPlaceHolder1_gvDocs_next");
+      if (!nextBtn || nextBtn.classList.contains("disabled")) break;
+
+      // Remember current first row id before clicking next
+      const currentFirstId = (document.querySelector('#ContentPlaceHolder1_gvDocs tr a[id^="ContentPlaceHolder1_gvDocs_btnSelectDoc"]')?.getAttribute("onclick") || "").match(/id=(\d+)/)?.[1];
+
+      nextBtn.click();
+      await sleep(500);
+
+      // Wait until the page actually changes (or retry a few times)
+      let tries = 0;
+      while (tries < 10) {
+        const newFirstId = (document.querySelector('#ContentPlaceHolder1_gvDocs tr a[id^="ContentPlaceHolder1_gvDocs_btnSelectDoc"]')?.getAttribute("onclick") || "").match(/id=(\d+)/)?.[1];
+        if (newFirstId && newFirstId !== currentFirstId) break;
+        await sleep(500);
+        tries++;
+      }
+    }
+  }
+
+  await goThroughPages();
+
+  // Generate the zip and trigger download
+  zip.generateAsync({ type: "blob" }).then(content => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(content);
+    a.download = zipFileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    console.log(`🎉 Done! ${successCount} files succeeded, ${failCount} failed. Saved as ${zipFileName}`);
+  });
+})();

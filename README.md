@@ -1,2 +1,3 @@
-# ahk
-AutoHotkey Scripts
+# Scripts
+- AutoHotkey
+- JS Console
