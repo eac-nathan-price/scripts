@@ -54,7 +54,19 @@
 
       const base = `${ymd} ${desc}`;
       const n = (seenNames[base] = (seenNames[base] || 0) + 1);
-      const fileName = n > 1 ? `${base} (${n}).pdf` : `${base}.pdf`;
+      
+      // Handle PDF extension properly
+      let fileName;
+      if (base.toLowerCase().endsWith('.pdf')) {
+        // Already has .pdf extension, just ensure it's lowercase
+        fileName = n > 1 ? `${base} (${n})` : base;
+        if (fileName.endsWith('.PDF')) {
+          fileName = fileName.slice(0, -4) + '.pdf';
+        }
+      } else {
+        // No PDF extension, add it
+        fileName = n > 1 ? `${base} (${n}).pdf` : `${base}.pdf`;
+      }
 
       await sleep(400);
 
