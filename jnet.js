@@ -89,7 +89,37 @@
     }
   }
 
+  async function goToFirstPage() {
+    const firstBtn = document.querySelector("#ContentPlaceHolder1_gvDocs_first");
+    if (!firstBtn || firstBtn.classList.contains("disabled")) {
+      console.log("Already on first page or no first button found");
+      return;
+    }
+
+    console.log("Navigating to first page...");
+    
+    // Remember current first row id before clicking first
+    const currentFirstId = (document.querySelector('#ContentPlaceHolder1_gvDocs tr a[id^="ContentPlaceHolder1_gvDocs_btnSelectDoc"]')?.getAttribute("onclick") || "").match(/id=(\d+)/)?.[1];
+
+    firstBtn.click();
+    await sleep(500);
+
+    // Wait until the page actually changes (or retry a few times)
+    let tries = 0;
+    while (tries < 10) {
+      const newFirstId = (document.querySelector('#ContentPlaceHolder1_gvDocs tr a[id^="ContentPlaceHolder1_gvDocs_btnSelectDoc"]')?.getAttribute("onclick") || "").match(/id=(\d+)/)?.[1];
+      if (newFirstId && newFirstId !== currentFirstId) break;
+      await sleep(500);
+      tries++;
+    }
+    
+    console.log("Now on first page");
+  }
+
   async function goThroughPages() {
+    // First, ensure we start from page 1
+    await goToFirstPage();
+    
     while (true) {
       await processPage();
 
