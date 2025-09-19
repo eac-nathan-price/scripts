@@ -1,3 +1,14 @@
+// ==UserScript==
+// @name         JNet Document Downloader
+// @namespace    http://tampermonkey.net/
+// @version      0.1
+// @description  Download all documents from JNet
+// @author       You
+// @match        https://your-jnet-site.com/*
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js
+// @grant        none
+// ==/UserScript==
+
 // Detect environment
 const isTampermonkey = typeof GM_info !== 'undefined' && GM_info.script;
 const isConsole = !isTampermonkey;
