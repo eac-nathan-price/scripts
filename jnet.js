@@ -1,5 +1,11 @@
-(async function () {
-  // Load JSZip dynamically if not already present
+// Detect environment
+const isTampermonkey = typeof GM_info !== 'undefined' && GM_info.script;
+const isConsole = !isTampermonkey;
+
+// Load JSZip only if not in Tampermonkey (where it's loaded via @require)
+async function loadJSZip() {
+  if (isTampermonkey) return; // JSZip loaded via @require in Tampermonkey
+  
   if (typeof JSZip === "undefined") {
     await new Promise((resolve, reject) => {
       const s = document.createElement("script");
@@ -9,6 +15,11 @@
       document.head.appendChild(s);
     });
   }
+}
+
+// Main execution function
+async function main() {
+  await loadJSZip();
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const sanitize = s => s.replace(/[\/\\:*?"<>|]/g, "-").replace(/\s+/g, " ").trim();
@@ -155,4 +166,15 @@
     document.body.removeChild(a);
     console.log(`🎉 Done! ${successCount} files succeeded, ${failCount} failed. Saved as ${zipFileName}`);
   });
-})();
+}
+
+// Execute based on environment
+if (isConsole) {
+  // Console usage: wrap in async function and execute immediately
+  (async function() {
+    await main();
+  })();
+} else {
+  // Tampermonkey usage: just call main() directly
+  main();
+}
