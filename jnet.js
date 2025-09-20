@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         JNet Document Downloader
-// @namespace    http://tampermonkey.net/
+// @namespace    https://github.com/eac-nathan-price
 // @version      0.1
 // @description  Download all documents from JNet
 // @author       You
-// @match        https://your-jnet-site.com/*
+// @match        https://www.sbcounty.gov/JNET/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js
 // @grant        none
 // ==/UserScript==
