@@ -6,6 +6,7 @@
 // @author       You
 // @match        https://www.sbcounty.gov/JNET/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js
+// @run-at       document-idle
 // @grant        none
 // ==/UserScript==
 
@@ -26,6 +27,71 @@ async function loadJSZip() {
       document.head.appendChild(s);
     });
   }
+}
+
+// Create sticky download button for Tampermonkey
+function createDownloadButton() {
+  // Remove existing button if it exists
+  const existingBtn = document.getElementById('jnet-download-btn');
+  if (existingBtn) existingBtn.remove();
+
+  const button = document.createElement('button');
+  button.id = 'jnet-download-btn';
+  button.textContent = '📥 Download All Documents';
+  button.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: all 0.2s ease;
+  `;
+
+  // Add hover effects
+  button.addEventListener('mouseenter', () => {
+    button.style.background = '#0056b3';
+    button.style.transform = 'translateY(-2px)';
+    button.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
+  });
+
+  button.addEventListener('mouseleave', () => {
+    button.style.background = '#007bff';
+    button.style.transform = 'translateY(0)';
+    button.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+  });
+
+  // Add click handler
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = '⏳ Downloading...';
+    button.style.background = '#6c757d';
+    
+    try {
+      await main();
+      button.textContent = '✅ Complete!';
+      setTimeout(() => button.remove(), 3000);
+    } catch (error) {
+      console.error('Download failed:', error);
+      button.textContent = '❌ Failed';
+      button.style.background = '#dc3545';
+      setTimeout(() => {
+        button.disabled = false;
+        button.textContent = '📥 Download All Documents';
+        button.style.background = '#007bff';
+      }, 3000);
+    }
+  });
+
+  document.body.appendChild(button);
+  console.log('📥 Download button added to page');
 }
 
 // Main execution function
@@ -186,6 +252,6 @@ if (isConsole) {
     await main();
   })();
 } else {
-  // Tampermonkey usage: just call main() directly
-  main();
+  // Tampermonkey usage: add download button instead of running immediately
+  createDownloadButton();
 }
