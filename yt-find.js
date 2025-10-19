@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         YouTube Ctrl F
+// @name         YouTube Find
 // @namespace    https://youtube.com/
-// @version      2.0
+// @version      2.1
 // @description  Press Ctrl+Shift+F to search YouTube's transcript and jump to that timestamp.
 // @author       eac-nathan-price
 // @match        https://www.youtube.com/watch*
@@ -12,10 +12,13 @@
   'use strict';
 
   let inputBox = null;
-  let cachedTranscript = [];
+  let cachedSegments = [];
   let scanning = false;
 
-  // Shortcut: Ctrl+Shift+F
+  // Helper: wait
+  const sleep = (ms) => new Promise(res => setTimeout(res, ms));
+
+  // Shortcut handler
   document.addEventListener('keydown', async (e) => {
     if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') {
       e.preventDefault();
@@ -23,6 +26,7 @@
     }
   });
 
+  // Toggle the floating search box
   function toggleInputBox() {
     if (inputBox) {
       inputBox.remove();
@@ -45,32 +49,23 @@
       color: '#fff',
       border: '2px solid #fff',
       borderRadius: '6px',
-      width: '300px'
+      width: '320px'
     });
-
     document.body.appendChild(inputBox);
     inputBox.focus();
-
-    // Fetch transcript
-    ensureTranscriptLoaded();
 
     inputBox.addEventListener('keydown', async (e) => {
       if (e.key === 'Enter') {
         const query = inputBox.value.trim().toLowerCase();
         if (!query) return;
+        await ensureTranscriptReady();
+        if (!cachedSegments.length) await scanTranscript();
 
-        if (!cachedTranscript.length && !scanning) {
-          inputBox.value = 'Loading transcript...';
-          inputBox.disabled = true;
-          await scanTranscript();
-          inputBox.disabled = false;
-          inputBox.value = query;
-        }
-
-        const match = cachedTranscript.find(item => item.text.toLowerCase().includes(query));
+        const match = cachedSegments.find(s => s.text.toLowerCase().includes(query));
         if (match) {
           match.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          match.element.click(); // this should click the timestamp link
+          await sleep(300);
+          match.element.querySelector('a[href^="/watch"]')?.click();
         } else {
           inputBox.style.borderColor = 'red';
         }
@@ -80,51 +75,77 @@
     });
   }
 
-  async function ensureTranscriptLoaded() {
-    // Open transcript if not visible
-    if (document.querySelector('ytd-transcript-renderer')) return;
+  // Ensure transcript is open and visible
+  async function ensureTranscriptReady() {
+    // If transcript panel already exists
+    if (document.querySelector('ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-searchable-transcript"]'))
+      return;
 
-    // Open "..." menu under description
-    const menuButton = document.querySelector('#primary-inner ytd-video-description-transcript-section-renderer tp-yt-paper-button, #primary-inner ytd-video-description #expand');
-    if (menuButton) menuButton.click();
-
-    // Wait and look for “Show transcript” button
-    let showButton;
-    for (let i = 0; i < 20; i++) {
-      showButton = [...document.querySelectorAll('button, yt-button-shape')].find(el => el.textContent.toLowerCase().includes('transcript'));
-      if (showButton) break;
-      await sleep(500);
+    // Open transcript via the “...” menu or the description section
+    const buttons = [...document.querySelectorAll('tp-yt-paper-button, button, yt-button-shape')];
+    const showTranscriptBtn = buttons.find(b => b.textContent.toLowerCase().includes('transcript'));
+    if (showTranscriptBtn) {
+      showTranscriptBtn.click();
+      await sleep(1500);
+      return;
     }
 
-    if (showButton) {
-      showButton.click();
-      await sleep(2000);
+    // Otherwise try opening from the context menu under description
+    const menuBtn = document.querySelector('ytd-menu-renderer yt-icon-button, ytd-menu-renderer button');
+    if (menuBtn) {
+      menuBtn.click();
+      await sleep(800);
+      const transcriptOption = [...document.querySelectorAll('tp-yt-paper-item')].find(el =>
+        el.textContent.toLowerCase().includes('transcript')
+      );
+      if (transcriptOption) {
+        transcriptOption.click();
+        await sleep(1500);
+      }
     }
   }
 
+  // Extract visible text, even inside shadow DOM
+  function deepText(el) {
+    if (!el) return '';
+    let text = el.textContent || '';
+    if (el.shadowRoot) {
+      for (const n of el.shadowRoot.querySelectorAll('*')) {
+        text += n.textContent || '';
+      }
+    }
+    return text.trim();
+  }
+
+  // Collect and cache transcript segments
   async function scanTranscript() {
     scanning = true;
-    cachedTranscript = [];
-    const container = document.querySelector('ytd-transcript-renderer #segments-container');
-    if (!container) {
+    cachedSegments = [];
+
+    const panel = document.querySelector('ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-searchable-transcript"]');
+    if (!panel) {
       scanning = false;
       return;
     }
 
-    const scrollContainer = container.parentElement;
+    const container = panel.querySelector('#segments-container');
+    const scrollContainer = container?.parentElement;
+    if (!scrollContainer) {
+      scanning = false;
+      return;
+    }
+
     let lastScrollTop = -1;
     let unchanged = 0;
 
     while (unchanged < 3) {
       const items = [...container.querySelectorAll('ytd-transcript-segment-renderer')];
       for (const item of items) {
-        const textEl = item.querySelector('#segment-text');
-        const timeEl = item.querySelector('a[href^="/watch"]');
-        if (textEl && !cachedTranscript.find(x => x.element === timeEl)) {
-          cachedTranscript.push({
-            text: textEl.textContent.trim(),
-            element: timeEl
-          });
+        const textEl = item.querySelector('.segment-text');
+        const linkEl = item.querySelector('a[href^="/watch"]');
+        const text = deepText(textEl);
+        if (text && !cachedSegments.find(s => s.element === item)) {
+          cachedSegments.push({ text, element: item, link: linkEl });
         }
       }
 
@@ -133,14 +154,10 @@
 
       if (scrollContainer.scrollTop === lastScrollTop) unchanged++;
       else unchanged = 0;
-
       lastScrollTop = scrollContainer.scrollTop;
     }
 
     scanning = false;
   }
 
-  function sleep(ms) {
-    return new Promise(res => setTimeout(res, ms));
-  }
 })();
