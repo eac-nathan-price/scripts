@@ -11,18 +11,20 @@ IsFusionActive() {
     if !IsFusionActive()
         return
     Send("{MButton down}")
-    KeyWait("Ctrl") ; Wait until Ctrl is released
-    KeyWait("`")
+    ; Wait for release of either Ctrl or `
+    KeyWait("Ctrl")
+    KeyWait("``") ; escape the backtick key properly
     Send("{MButton up}")
 }
 
 ; --- Ctrl + Shift + ~ → Hold Shift + MMB ---
-^+~:: {
+^+`:: {
     if !IsFusionActive()
         return
     Send("{Shift down}{MButton down}")
+    ; Wait for release of any of the modifier keys
     KeyWait("Ctrl")
     KeyWait("Shift")
-    KeyWait("`")  ; ~ is Shift + `
+    KeyWait("``")
     Send("{MButton up}{Shift up}")
 }
