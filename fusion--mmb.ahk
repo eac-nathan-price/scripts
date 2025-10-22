@@ -6,31 +6,24 @@ IsFusionActive() {
     return InStr(title, "Autodesk Fusion")
 }
 
-; --- Hotkey: Ctrl + ` ---
+; --- Ctrl + ` → Hold MMB ---
 ^`:: {
-    if IsFusionActive() {
-        ; Hold middle mouse button
-        Send("{MButton down}")
-        KeyWait("Ctrl")
-        KeyWait("``")
-        Send("{MButton up}")
-    } else {
-        ; Pass through normally to other apps without triggering this hotkey again
-        SendInput("{Blind}^``")
-    }
+    if !IsFusionActive()
+        return  ; do nothing outside Fusion
+    Send("{MButton down}")
+    ; Wait for key release
+    KeyWait("Ctrl")
+    KeyWait("``")
+    Send("{MButton up}")
 }
 
-; --- Hotkey: Ctrl + Shift + ` (aka ~) ---
+; --- Ctrl + Shift + ` → Hold Shift + MMB ---
 ^+`:: {
-    if IsFusionActive() {
-        ; Hold Shift + MMB
-        Send("{Shift down}{MButton down}")
-        KeyWait("Ctrl")
-        KeyWait("Shift")
-        KeyWait("``")
-        Send("{MButton up}{Shift up}")
-    } else {
-        ; Pass through normally
-        SendInput("{Blind}^+``")
-    }
+    if !IsFusionActive()
+        return  ; do nothing outside Fusion
+    Send("{Shift down}{MButton down}")
+    KeyWait("Ctrl")
+    KeyWait("Shift")
+    KeyWait("``")
+    Send("{MButton up}{Shift up}")
 }
