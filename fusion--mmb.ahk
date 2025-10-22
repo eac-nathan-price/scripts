@@ -1,31 +1,19 @@
-; --- Function to check if active window is Fusion 360 ---
-isFusionActive() {
-    winTitle := WinGetTitle("A")
+#SingleInstance Force
+
+; Function to check if active window contains "Autodesk Fusion"
+IsFusionActive() {
+    WinGetTitle, winTitle, A
     return InStr(winTitle, "Autodesk Fusion")
 }
 
-; --- Alt alone or Shift+Alt in Fusion ---
 *Alt::
-{
-    if isFusionActive() {
-        if GetKeyState("Shift", "P") {
-            ; Shift + Alt → Shift + MMB
-            SendEvent("{Shift down}")
-            SendEvent("{MButton down}")
-            KeyWait("Alt")
-            SendEvent("{MButton up}")
-            SendEvent("{Shift up}")
-        } else {
-            ; Alt alone → MMB
-            SendEvent("{MButton down}")
-            KeyWait("Alt")
-            SendEvent("{MButton up}")
-        }
-        return
+    if (IsFusionActive()) {
+        SendInput, {MButton down}   ; Hold middle mouse
+        KeyWait, Alt                ; Wait until Alt is released
+        SendInput, {MButton up}     ; Release middle mouse
+    } else {
+        SendInput, {Alt down}       ; Normal Alt behavior
+        KeyWait, Alt
+        SendInput, {Alt up}
     }
-
-    ; Not in Fusion → behave normally
-    SendEvent("{Alt down}")
-    KeyWait("Alt")
-    SendEvent("{Alt up}")
-}
+return
