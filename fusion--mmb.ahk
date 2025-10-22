@@ -2,7 +2,7 @@
 
 ; --- Helper function to check if Autodesk Fusion is active ---
 IsFusionActive() {
-    WinGetTitle(&title, "A")
+    title := WinGetTitle("A")
     return InStr(title, "Autodesk Fusion")
 }
 
@@ -13,7 +13,7 @@ IsFusionActive() {
     Send("{MButton down}")
     ; Wait for release of either Ctrl or `
     KeyWait("Ctrl")
-    KeyWait("``") ; escape the backtick key properly
+    KeyWait("``") ; Escaped backtick
     Send("{MButton up}")
 }
 
@@ -22,7 +22,7 @@ IsFusionActive() {
     if !IsFusionActive()
         return
     Send("{Shift down}{MButton down}")
-    ; Wait for release of any of the modifier keys
+    ; Wait for release of modifiers
     KeyWait("Ctrl")
     KeyWait("Shift")
     KeyWait("``")
