@@ -1,20 +1,27 @@
 #SingleInstance Force
 #UseHook On
 
-*Alt::
-    ; Get the active window title
+; Helper function to check if active window is Autodesk Fusion
+IsFusionActive() {
     WinGetTitle, winTitle, A
+    return InStr(winTitle, "Autodesk Fusion")
+}
 
-    ; Check if "Autodesk Fusion" is in the title
-    if InStr(winTitle, "Autodesk Fusion") {
-        SendInput, {MButton down}   ; Hold middle mouse button
-        KeyWait, Alt                ; Wait until Alt is released
-        SendInput, {MButton up}     ; Release middle mouse button
-        return                      ; Stop here (don't send Alt)
+; --- Alt + Right Mouse Button (handles Shift inside) ---
+~Alt & RButton::
+    if (IsFusionActive()) {
+        ; Check if Shift is held
+        if GetKeyState("Shift", "P") {
+            SendInput, {Shift down}{MButton down}   ; Hold Shift + MMB
+            KeyWait, RButton
+            SendInput, {MButton up}{Shift up}       ; Release both
+        } else {
+            SendInput, {MButton down}               ; Hold MMB
+            KeyWait, RButton
+            SendInput, {MButton up}                 ; Release MMB
+        }
+        return
     } else {
-        ; If not Fusion, let Alt behave normally
-        Send, {Blind}{Alt down}
-        KeyWait, Alt
-        Send, {Blind}{Alt up}
+        Click, right                                 ; Normal RMB
     }
 return
