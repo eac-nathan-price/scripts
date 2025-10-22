@@ -1,27 +1,30 @@
 #SingleInstance Force
 #UseHook On
 
-; Helper function to check if active window is Autodesk Fusion
+; Check if Autodesk Fusion is active
 IsFusionActive() {
     WinGetTitle, winTitle, A
     return InStr(winTitle, "Autodesk Fusion")
 }
 
-; --- Alt + Right Mouse Button (handles Shift inside) ---
-~Alt & RButton::
+; --- Ctrl + M ---
+^m::
     if (IsFusionActive()) {
-        ; Check if Shift is held
-        if GetKeyState("Shift", "P") {
-            SendInput, {Shift down}{MButton down}   ; Hold Shift + MMB
-            KeyWait, RButton
-            SendInput, {MButton up}{Shift up}       ; Release both
-        } else {
-            SendInput, {MButton down}               ; Hold MMB
-            KeyWait, RButton
-            SendInput, {MButton up}                 ; Release MMB
-        }
-        return
+        SendInput, {MButton down}       ; Hold middle mouse
+        KeyWait, M                      ; Wait until M released
+        SendInput, {MButton up}         ; Release MMB
     } else {
-        Click, right                                 ; Normal RMB
+        Send, ^m                         ; Pass through normally in other apps
+    }
+return
+
+; --- Ctrl + Shift + M ---
+^+m::
+    if (IsFusionActive()) {
+        SendInput, {Shift down}{MButton down} ; Hold Shift + MMB
+        KeyWait, M
+        SendInput, {MButton up}{Shift up}     ; Release both
+    } else {
+        Send, ^+m                              ; Pass through normally
     }
 return
