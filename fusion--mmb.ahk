@@ -1,23 +1,36 @@
 #Requires AutoHotkey v2.0
 
-; --- Only activate these hotkeys when Fusion is active ---
-#HotIf WinActive("ahk_exe Fusion360.exe") || InStr(WinGetTitle("A"), "Autodesk Fusion")
+; --- Function to check if Fusion is active ---
+IsFusionActive() {
+    title := WinGetTitle("A")
+    return InStr(title, "Autodesk Fusion")
+}
 
-; Ctrl + ` → Hold MMB
+; --- Hotkey: Ctrl + ` ---
 ^`:: {
-    Send("{MButton down}")
-    KeyWait("Ctrl")
-    KeyWait("``")
-    Send("{MButton up}")
+    if IsFusionActive() {
+        ; Hold middle mouse button
+        Send("{MButton down}")
+        KeyWait("Ctrl")
+        KeyWait("``")
+        Send("{MButton up}")
+    } else {
+        ; Pass through normally to other apps without triggering this hotkey again
+        SendInput("{Blind}^``")
+    }
 }
 
-; Ctrl + Shift + ` (aka ~) → Hold Shift + MMB
+; --- Hotkey: Ctrl + Shift + ` (aka ~) ---
 ^+`:: {
-    Send("{Shift down}{MButton down}")
-    KeyWait("Ctrl")
-    KeyWait("Shift")
-    KeyWait("``")
-    Send("{MButton up}{Shift up}")
+    if IsFusionActive() {
+        ; Hold Shift + MMB
+        Send("{Shift down}{MButton down}")
+        KeyWait("Ctrl")
+        KeyWait("Shift")
+        KeyWait("``")
+        Send("{MButton up}{Shift up}")
+    } else {
+        ; Pass through normally
+        SendInput("{Blind}^+``")
+    }
 }
-
-#HotIf  ; Disable the hotkeys elsewhere — VS Code gets its Ctrl+` back
