@@ -1,30 +1,51 @@
 #SingleInstance Force
 #UseHook On
+SetBatchLines, -1
+SetKeyDelay, -1, 0
 
-; Check if Autodesk Fusion is active
+; --- helper: is Autodesk Fusion active? ---
 IsFusionActive() {
     WinGetTitle, winTitle, A
     return InStr(winTitle, "Autodesk Fusion")
 }
 
-; --- Ctrl + M ---
+; --- helper: send low-level middle button down/up via mouse_event ---
+MiddleDown() {
+    ; MOUSEEVENTF_MIDDLEDOWN = 0x0020
+    DllCall("mouse_event", "UInt", 0x0020, "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 0)
+}
+MiddleUp() {
+    ; MOUSEEVENTF_MIDDLEUP = 0x0040
+    DllCall("mouse_event", "UInt", 0x0040, "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 0)
+}
+
+; --- Ctrl + M (hold behavior) ---
 ^m::
     if (IsFusionActive()) {
-        SendInput, {MButton down}       ; Hold middle mouse
-        KeyWait, M                      ; Wait until M released
-        SendInput, {MButton up}         ; Release MMB
+        ; hold MMB while M is held
+        MiddleDown()
+        KeyWait, m          ; wait until key released
+        MiddleUp()
     } else {
-        Send, ^m                         ; Pass through normally in other apps
+        ; pass-through: temporarily disable hotkey to avoid recursion
+        Hotkey, ^m, Off
+        Send, ^m
+        Hotkey, ^m, On
     }
 return
 
-; --- Ctrl + Shift + M ---
+; --- Ctrl + Shift + M (hold behavior with Shift) ---
 ^+m::
     if (IsFusionActive()) {
-        SendInput, {Shift down}{MButton down} ; Hold Shift + MMB
-        KeyWait, M
-        SendInput, {MButton up}{Shift up}     ; Release both
+        ; hold Shift + MMB while M is held
+        Send, {Shift down}
+        MiddleDown()
+        KeyWait, m
+        MiddleUp()
+        Send, {Shift up}
     } else {
-        Send, ^+m                              ; Pass through normally
+        Hotkey, ^+m, Off
+        Send, ^+m
+        Hotkey, ^+m, On
     }
 return
