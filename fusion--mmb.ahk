@@ -6,25 +6,29 @@ IsFusionActive() {
     return InStr(title, "Autodesk Fusion")
 }
 
-; --- Ctrl + ` → Hold MMB ---
+; --- Ctrl + ` → Hold MMB (only in Fusion) ---
 ^`:: {
-    if !IsFusionActive()
-        return
-    Send("{MButton down}")
-    ; Wait for release of either Ctrl or `
-    KeyWait("Ctrl")
-    KeyWait("``") ; Escaped backtick
-    Send("{MButton up}")
+    if IsFusionActive() {
+        Send("{MButton down}")
+        KeyWait("Ctrl")
+        KeyWait("``")
+        Send("{MButton up}")
+    } else {
+        ; Pass through original keys to other apps
+        Send("^``")
+    }
 }
 
-; --- Ctrl + Shift + ~ → Hold Shift + MMB ---
+; --- Ctrl + Shift + ` (aka ~) → Hold Shift + MMB (only in Fusion) ---
 ^+`:: {
-    if !IsFusionActive()
-        return
-    Send("{Shift down}{MButton down}")
-    ; Wait for release of modifiers
-    KeyWait("Ctrl")
-    KeyWait("Shift")
-    KeyWait("``")
-    Send("{MButton up}{Shift up}")
+    if IsFusionActive() {
+        Send("{Shift down}{MButton down}")
+        KeyWait("Ctrl")
+        KeyWait("Shift")
+        KeyWait("``")
+        Send("{MButton up}{Shift up}")
+    } else {
+        ; Pass through to other apps
+        Send("^+``")
+    }
 }
