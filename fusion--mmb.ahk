@@ -1,19 +1,20 @@
 #SingleInstance Force
-
-; Function to check if active window contains "Autodesk Fusion"
-IsFusionActive() {
-    WinGetTitle, winTitle, A
-    return InStr(winTitle, "Autodesk Fusion")
-}
+#UseHook On
 
 *Alt::
-    if (IsFusionActive()) {
-        SendInput, {MButton down}   ; Hold middle mouse
+    ; Get the active window title
+    WinGetTitle, winTitle, A
+
+    ; Check if "Autodesk Fusion" is in the title
+    if InStr(winTitle, "Autodesk Fusion") {
+        SendInput, {MButton down}   ; Hold middle mouse button
         KeyWait, Alt                ; Wait until Alt is released
-        SendInput, {MButton up}     ; Release middle mouse
+        SendInput, {MButton up}     ; Release middle mouse button
+        return                      ; Stop here (don't send Alt)
     } else {
-        SendInput, {Alt down}       ; Normal Alt behavior
+        ; If not Fusion, let Alt behave normally
+        Send, {Blind}{Alt down}
         KeyWait, Alt
-        SendInput, {Alt up}
+        Send, {Blind}{Alt up}
     }
 return
